@@ -70,7 +70,7 @@ def import_function():
     import_frame.rowconfigure((0, 1, 2, 3), weight = 1, uniform = 'a')
     import_frame.grid(column = 2, row = 1, sticky = 'nsew')
 
-    host_label = ttk.Label(import_frame, text = f'IP Address: {get_host()}')
+    host_label = ttk.Label(import_frame, text = f'IP Address: {HOST}')
     host_label.grid(column = 0, row = 0)
 
     port_label = ttk.Label(import_frame, text = f'Port being used: Port {port}.')

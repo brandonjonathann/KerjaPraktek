@@ -30,7 +30,7 @@ def append_data_to_database(file_path: str):
 
             # Append data to the respective 'kandang'.
             with open(database_path, 'a') as database_file:
-                row.to_csv(database_file, mode = 'a',index = False, header = False)
+                csv_dataframe.iloc[[row_index]].to_csv(database_file, mode = 'a',index = False, header = False)
 
     except FileNotFoundError as e:
         print(f"Error: the file '{file_path}' was not found.")

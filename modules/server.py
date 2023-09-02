@@ -42,12 +42,27 @@ def find_open_port():
     # Return None if no open port is found.
     return None
     
+def receive_data(client: socket, file_name: str):
+    with open(file_name, "wb") as file:
+        file_in_bytes = b""
+
+        while True:
+            data_chunk = client.recv(1024)
+            if file_in_bytes[-5:] == b"<END>":
+                break
+            else:
+                file_in_bytes += data_chunk
+
+        file.write(file_in_bytes[:-5])
+            
+
 def start_server(port: int, new_files: list):
-    importing = True
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((HOST, port))
     server.listen()
     print(f'Server is listening.')
+
+    importing = True
 
     while importing:
         client, address = server.accept()
@@ -55,27 +70,14 @@ def start_server(port: int, new_files: list):
         file_name = client.recv(1024).decode()
         print(file_name)
 
-        if file_name != 'process ender':
-            file = open(file_name, "wb")
-            file_bytes = b""
-
-            done = False
-            while not done:
-                data = client.recv(1024)
-                if file_bytes[-5:] == b"<END>":
-                    done = True
-                else:
-                    file_bytes += data
-
-            file.write(file_bytes[:-5])
-
-            file.close()
-            client.close()
-            new_files.append(file_name)
-
-        else:
+        if file_name == 'process ender':
             print(f'Import process is terminated, closing server.')
             importing = False
+
+        else:
+            receive_data(client, file_name)
+            client.close()
+            new_files.append(file_name)
 
     server.close()
 
@@ -84,6 +86,3 @@ def end_server(port: int):
     client.connect((HOST, port))
 
     client.send("process ender".encode())
-
-def get_host():
-    return HOST

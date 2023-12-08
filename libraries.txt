@@ -1,9 +1,4 @@
 python
 ttkbootstrap
-pandas
-socket
-matplotlib
 socket
 os
-
-pip install python-nmap

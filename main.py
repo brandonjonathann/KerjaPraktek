@@ -1,6 +1,5 @@
 import tkinter as tk
 import ttkbootstrap as ttk
-from tkinter import filedialog
 import pathlib
 import sys
 import threading
@@ -14,148 +13,227 @@ sys.path.append(MODULES)
 
 from modules.append_data import *
 from modules.server import *
-# from modules.client import *
-# from modules.readcsv import *
 
-# Starting the Window
-window = tk.Tk()
-window.title("CV. Missouri Farm Rancakalong")
-window.iconbitmap('icon.ico')
+def screen_center(self: tk.Tk, width, height):
+    x = int((self.winfo_screenwidth() - width) / 2)
+    y = int((self.winfo_screenheight() - height) / 2)
+    return f'{width}x{height}+{x}+{y}'
 
-# Screen Atrributes
-screen_height = window.winfo_screenheight()
-screen_width = window.winfo_screenwidth()
+class Main_Window(tk.Tk):
+    def __init__(self):
+        super().__init__()
 
-# Setting Window Attribute
-window_starting_height = int(0.75 * screen_height)
-window_starting_width = int(1.25 * screen_height)
-window.resizable(False, False)
+        # Window Attributes
+        self.title('CV. Missouri Farm Rancakalong')
+        self.iconbitmap('icon.ico')
+        self.starting_width = int(0.75 * self.winfo_screenwidth())
+        self.starting_height = int(0.75 * self.winfo_screenheight())
+        self.minsize(self.starting_width, self.starting_height)
+        self.geometry(screen_center(self, self.starting_width, self.starting_height))
 
-# Start Window in the Middle of The Screen
-left_starting_point = int((screen_width - window_starting_width) / 2)
-top_starting_point = int((screen_height - window_starting_height) / 2 - 20) #20 for title bar
-window.geometry(f"{window_starting_width}x{window_starting_height}+{left_starting_point}+{top_starting_point}")
+        # Grid
+        self.columnconfigure(0, weight = 1, uniform = 'a')
+        self.columnconfigure(1, weight = 8, uniform = 'a')
+        self.columnconfigure(2, weight = 1, uniform = 'a')
+        self.rowconfigure(0, weight = 1, uniform = 'a')
+        self.rowconfigure(1, weight = 9, uniform = 'a')
 
-# Grid
-window.columnconfigure((0, 1), weight = 1, uniform = 'a')
-window.columnconfigure(2, weight = 8, uniform = 'a')
-window.rowconfigure(0, weight = 1, uniform = 'a')
-window.rowconfigure(1, weight = 9, uniform = 'a')
+        # Widgets
+        Main_Menu_Buttons(self, 'Import Data', lambda: import_data_function(self), 2, 0)
 
-# Functions
-def open_menu():
-    menu.place(x = 0, y = 0, relwidth = 0.3, relheight = 1)
-    menu.lift()
-    menu_button2.grid(column = 0, row = 0, sticky = 'nsew')
-    today_data.grid(column = 0, row = 1, sticky = 'nsew')
-    select_kandang.grid(column = 0, row = 2, sticky = 'nsew')
-    import_file.grid(column = 0, row = 3, sticky = 'nsew')
+        # Mainloop
+        self.mainloop()
 
-def close_menu():
-    menu.place_forget()
+class Main_Menu_Buttons(ttk.Button):
+    def __init__(self, parent, text, command, column, row):
+        super().__init__(parent, text = text, command = command)
+        self.grid(column = column, row = row, sticky = 'nsew', padx = 10, pady = 10)
 
-def import_function():
+class No_Port_Notification(ttk.Toplevel):
+    def __init__(self, parent: Main_Window):
+        super().__init__(parent)
+        self.geometry(screen_center(parent, 250, 100))
+        self.overrideredirect(True)
 
-    close_menu()
+        ttk.Label(self, text = 'No port is currently available.').pack(padx = 10, pady = 10)
+        ttk.Button(self, text = 'OK', command = self.destroy).pack(padx = 10, pady = 10)
+        self.grab_set()
+        parent.wait_window(self)
+        self.grab_release()
+
+class Import_Menu(ttk.Toplevel):
+    def __init__(self, parent: Main_Window, port, waiting_for_connection_variable, new_files):
+        super().__init__(parent)
+        self.geometry(screen_center(parent, 250, 100))
+        self.overrideredirect(True)
+        self.columnconfigure(0, weight = 1, uniform = 'a')
+        self.rowconfigure((0, 1, 2, 3), weight = 1, uniform = 'a')
+        
+        ttk.Label(self, text = f'IP Address: {HOST}').grid(column = 0, row = 0)
+        ttk.Label(self, text = f'Port: {port}').grid(column = 0, row = 1)
+        ttk.Label(self, textvariable = waiting_for_connection_variable).grid(column = 0, row = 2)
+        ttk.Button(self, text = 'End Import', command = lambda: end_server(port)).grid(column = 0, row = 3)
+
+        server_thread = threading.Thread(target = lambda: start_server(port, new_files))
+        server_thread.start()
+        connection_thread = threading.Thread(target = lambda: change_connecting_label_text(server_thread, waiting_for_connection_variable, new_files, self))
+        connection_thread.start()
+
+        self.grab_set()
+        parent.wait_window(self)
+        self.grab_release()
+
+def import_data_function(parent):
     port = find_open_port()
+    if port == None:
+        No_Port_Notification(parent)
+    else:
+        new_files = []
+        waiting_for_connection_variable = ttk.StringVar()
+        Import_Menu(parent, port, waiting_for_connection_variable, new_files)
 
-    # if port == None:
-    #     there is no open port, create a pop up
-    # else:
-    #     there is an open port, proceed
+def change_connecting_label_text(server_thread: threading.Thread, waiting_for_connection_variable: ttk.StringVar, new_files, menu: Import_Menu):
+    time_sleeping = 0
+    while server_thread.is_alive():
+        if time_sleeping % 3 == 0:
+            waiting_for_connection_variable.set('Waiting for connection, please wait.')
+        elif time_sleeping % 3 == 1:
+            waiting_for_connection_variable.set('Waiting for connection, please wait..')
+        else:
+            waiting_for_connection_variable.set('Waiting for connection, please wait...')
+        time.sleep(1)
+        time_sleeping += 1
+    menu.destroy()
 
-    # Widgets
-    import_frame = ttk.Frame(window)
-    import_frame.columnconfigure(0, weight = 1, uniform = 'a')
-    import_frame.rowconfigure((0, 1, 2, 3), weight = 1, uniform = 'a')
-    import_frame.grid(column = 2, row = 1, sticky = 'nsew')
+    for file in new_files:
+        if os.path.exists(file):
+            if file.endswith('.csv'):
+                append_data_to_database(file)
+                os.remove(file)
 
-    host_label = ttk.Label(import_frame, text = f'IP Address: {HOST}')
-    host_label.grid(column = 0, row = 0)
+Main_Window()
 
-    port_label = ttk.Label(import_frame, text = f'Port being used: Port {port}.')
-    port_label.grid(column = 0, row = 1)
+# # Functions
+
+# def import_function():
+
+#     menu.place_forget()
+#     port = find_open_port()
+
+#     if port == None:
+
+#         no_port_frame = ttk.Frame(window)
+#         no_port_label = ttk.Label(no_port_frame, text = 'No port is available.')
+#         no_port_button = ttk.Button(no_port_frame, text = 'OK', command = no_port_frame.place_forget)
+
+#         no_port_frame.place(relx = 0.5, rely = 0.5, anchor = 'center')
+#         no_port_label.pack(fill = 'both')
+#         no_port_button.pack(fill = 'both')
+
+#     else:
+
+#         # Widgets
+#         import_frame = ttk.Frame(window)
+#         import_frame.columnconfigure(0, weight = 1, uniform = 'a')
+#         import_frame.rowconfigure((0, 1, 2, 3), weight = 1, uniform = 'a')
+#         import_frame.grid(column = 2, row = 1, sticky = 'nsew')
+
+#         host_label = ttk.Label(import_frame, text = f'IP Address: {HOST}')
+#         host_label.grid(column = 0, row = 0)
+
+#         port_label = ttk.Label(import_frame, text = f'Port being used: Port {port}.')
+#         port_label.grid(column = 0, row = 1)
+        
+#         waiting_for_connection_variable = tk.StringVar()
+#         connecting_label = ttk.Label(import_frame, textvariable = waiting_for_connection_variable)
+#         connecting_label.grid(column = 0, row = 2)
+
+#         import_end_button = ttk.Button(import_frame, text = f'End Import', command = lambda : end_server(port))
+#         import_end_button.grid(column = 0, row = 3, sticky = 'nsew', padx = 10, pady = 10)
+
+#         # Import Process
+#         new_files = []
+
+#         server_thread = threading.Thread(target = lambda: start_server(port, new_files))
+#         server_thread.start()
+
+#         def change_connecting_label_text():
+#             time_sleeping = 0
+#             while server_thread.is_alive():
+#                 if time_sleeping % 3 == 0:
+#                     waiting_for_connection_variable.set('Waiting for connection, please wait.')
+#                 elif time_sleeping % 3 == 1:
+#                     waiting_for_connection_variable.set('Waiting for connection, please wait..')
+#                 else:
+#                     waiting_for_connection_variable.set('Waiting for connection, please wait...')
+#                 time.sleep(1)
+#                 time_sleeping += 1
+#             import_frame.grid_forget()
+
+#             for file in new_files:
+#                 if os.path.exists(file):
+#                     if file.endswith('.csv'):
+#                         append_data_to_database(file)
+#                         os.remove(file)
+
+#         connecting_label_thread = threading.Thread(target = change_connecting_label_text)
+#         connecting_label_thread.start()
+
+# def sort_kandang(list_of_kandang_number: list[str]):
+#     temporary_list = []
+#     for kandang in list_of_kandang_number:
+#         temporary_list.append(int(kandang.split('R')[1]))
+
+#     temporary_list = sorted(temporary_list)
+#     for index in range(len(temporary_list)):
+#         temporary_list[index] = f'R{temporary_list[index]}'
     
-    connecting_label_text = tk.StringVar()
-    connecting_label = ttk.Label(import_frame, textvariable = connecting_label_text)
-    connecting_label.grid(column = 0, row = 2)
+#     return temporary_list
 
-    import_end_button = ttk.Button(import_frame, text = f'End Import', command = lambda : end_server(port))
-    import_end_button.grid(column = 0, row = 3, sticky = 'nsew', padx = 10, pady = 10)
+# class Kandang:
+#     def __init__(self, number, parent):
+#         self.parent = parent
+#         self.number = number
+#         self.checkvar = ttk.IntVar(value = 0)
+#         ttk.Checkbutton(self.parent, text = self.number, variable = self.checkvar, onvalue = 1, offvalue = 0, command = lambda: print(self.checkvar.get())).pack(fill = 'x')
 
-    # Import Process
-    new_files = []
+# # Variables
+# list_of_kandang_number = [str]
+# list_of_kandang = [Kandang]
 
-    server_thread = threading.Thread(target = lambda: start_server(port, new_files))
-    server_thread.start()
+# def menu_kandang():
+    
+#     global list_of_kandang_number
+#     global list_of_kandang
 
-    def change_connecting_label_text():
-        time_sleeping = 0
-        while server_thread.is_alive():
-            if time_sleeping % 3 == 0:
-                connecting_label_text.set('Waiting for connection, please wait.')
-            elif time_sleeping % 3 == 1:
-                connecting_label_text.set('Waiting for connection, please wait..')
-            else:
-                connecting_label_text.set('Waiting for connection, please wait...')
-            time.sleep(1)
-            time_sleeping += 1
-        print(f'Server has been closed.')
-        import_frame.grid_forget()
+#     list_of_kandang_number = sort_kandang(os.listdir(DATABASE))
 
-        for file in new_files:
-            if os.path.exists(file):
-                if file.endswith('.csv'):
-                    append_data_to_database(file)
-                    os.remove(file)
+#     menu.place_forget()
 
-    connecting_label_thread = threading.Thread(target = change_connecting_label_text)
-    connecting_label_thread.start()
+#     menu_kandang_frame = ttk.Frame(window)
+#     menu_kandang_frame.grid(column = 1, row = 1, sticky = 'nsew')
 
-# Widgets
-menu_button1 = ttk.Button(window, text = '=', command = open_menu)
-menu_button1.grid(column = 0, row = 0, sticky = 'nsew')
+#     kandang_list_frame = ttk.Frame(menu_kandang_frame)
+#     kandang_list_frame.grid(column = 1, row = 1, sticky = 'nsew')
 
-menu = ttk.Frame(window)
-menu.columnconfigure(0, weight = 1, uniform = 'a')
-menu.rowconfigure((0, 1, 2, 3), weight = 1, uniform = 'a')
-menu.rowconfigure(4, weight = 6, uniform = 'a')
+#     for kandang_number in list_of_kandang_number:
+#         list_of_kandang.append(Kandang(kandang_number, kandang_list_frame))
+    
+# # Widgets
+# menu_button1 = ttk.Button(window, text = '=', command = open_menu)
+# menu_button1.grid(column = 0, row = 0, sticky = 'nsew')
 
-menu_button2 = ttk.Button(menu, text = '=', command = close_menu)
-today_data = ttk.Button(menu, text = "Today's Data")
-select_kandang = ttk.Button(menu, text = "Select Kandang")
-import_file = ttk.Button(menu, text = "Import File", command = import_function)
+# menu = ttk.Frame(window)
+# menu.columnconfigure(0, weight = 1, uniform = 'a')
+# menu.rowconfigure((0, 1, 2, 3), weight = 1, uniform = 'a')
+# menu.rowconfigure(4, weight = 6, uniform = 'a')
 
-welcome_label = ttk.Label(window, text = 'Welcome Back')
-welcome_label.grid(column = 1, row = 0, columnspan = 2, sticky = 'nsew', padx = 10)
+# menu_button2 = ttk.Button(menu, text = '=', command = menu.place_forget)
+# today_data = ttk.Button(menu, text = "Today's Data")
 
+# select_kandang = ttk.Button(menu, text = "Select Kandang", command = menu_kandang)
+# import_file = ttk.Button(menu, text = "Import File", command = import_function)
 
+# welcome_label = ttk.Label(window, text = 'Welcome Back')
+# welcome_label.grid(column = 1, row = 0, columnspan = 2, sticky = 'nsew', padx = 10)
 
-# main_tabs = ttk.Notebook(window)
-# tab1 = ttk.Frame(main_tabs)
-# tab2 = ttk.Frame(main_tabs)
-# main_tabs.add(tab1, text = 'Tab 1')
-# main_tabs.add(tab2, text = 'Tab 2')
-
-# main_tabs.grid(row = 1, column = 0, columnspan = 2, sticky = 'nwes')
-
-# welcome = ttk.Label(window, text = "Welcome Back")
-# welcome.grid(row = 0, column = 0)
-
-# today_insights = ttk.Label(window, text = "Today's Insights")
-# today_insights.pack()
-
-# import_button = ttk.Button(window, text = "Import", command = import_function)
-# import_button.pack()
-
-# show_insights = ttk.Label(window, text = "Checkbuttons")
-# # show_insights.pack()
-
-# def kandang_function():
-#     files = os.listdir(DATABASE)
-#     print(files)
-
-# kandang_button = ttk.Button(window, text = "Kandang", command = kandang_function)
-# kandang_button.pack()
-
-window.mainloop()

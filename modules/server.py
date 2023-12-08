@@ -60,18 +60,19 @@ def start_server(port: int, new_files: list):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((HOST, port))
     server.listen()
-    print(f'Server is listening.')
+    print(f'[Server] Listening for incoming connections.')
 
     importing = True
 
     while importing:
         client, address = server.accept()
-        print(f'Server accepted a client.')
+        print(f'[Server] Accepted a connection from {address}.')
         file_name = client.recv(1024).decode()
-        print(file_name)
+        print(f'[Server] Received file {file_name}.')
 
-        if file_name == 'process ender':
-            print(f'Import process is terminated, closing server.')
+        if file_name == 'Process_Ender':
+            print(f'[Server] Import process is terminated')
+            print(f'[Server] Closing server.')
             importing = False
 
         else:
@@ -85,4 +86,4 @@ def end_server(port: int):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((HOST, port))
 
-    client.send("process ender".encode())
+    client.send("Process_Ender".encode())

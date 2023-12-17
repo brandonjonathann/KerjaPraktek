@@ -44,6 +44,7 @@ class Main_Window(tk.Tk):
         # Widgets
         self.import_button = Main_Menu_Buttons(self, 'Import Data', lambda: import_data_function(self), 2, 0)
         self.list_kandang = Display_List_Kandang(self, 0, 1)
+        self.current_kandang = None
 
         # display_kandang()
 
@@ -105,6 +106,14 @@ class Display_List_Kandang(ttk.Frame):
 
         self.treeview.bind('<<TreeviewSelect>>', item_select)
 
+class Display_Data_Kandang(ttk.Frame):
+    def __init__(self, parent: Main_Window, column, row):
+        super().__init__(parent)
+        self.treeview = ttk.Treeview(self)
+        self.treeview.pack()
+
+        self.grid(column = column, row = row)
+        
 def import_data_function(parent):
     port = find_open_port()
     if port == None:

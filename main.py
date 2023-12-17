@@ -89,46 +89,21 @@ class Import_Menu(ttk.Toplevel):
         parent.wait_window(self)
         self.grab_release()
 
-class Display_List_Kandang_1(ttk.Canvas):
-    def __init__(self, parent: Main_Window, column, row):
-        super().__init__(parent)
-        self.grid(column = column, row = row, sticky = 'nsew')
-        self.jumlah_kandang = len(list_of_kandang)
-        self.list_height = self.jumlah_kandang * 50
-        self.configure(scrollregion = (0, 0, self.winfo_width(), self.list_height))
-
-        self.frame = ttk.Frame(self)
-
-        for index, kandang in enumerate(list_of_kandang):
-            print(f'{index} + {kandang}')
-            kandang_button_list.append(ttk.Button(self.frame, text = kandang))
-            kandang_button_list[index].pack(expand = True, fill = 'both', padx = 1, pady = 1)
-
-        self.scrollbar = ttk.Canvas(parent)
-        self.scrollbar.grid(column = column + 1, row = row, sticky = 'nsew', padx = 1, pady = 1)
-        self.scrollbar.bind('<MouseWheel>', lambda event: self.yview_scroll(-int(event.delta / 60), "units"))
-        self.bind('<Configure>', self.update_size)            
-
-    def update_size(self, event):
-        if self.list_height >= self.winfo_height():
-            height = self.list_height
-            self.scrollbar.bind('<MouseWheel>', lambda event: self.yview_scroll(-int(event.delta / 60), "units"))
-        else:
-            height = self.list_height
-            self.unbind_all('<MouseWheel>')
-
-        self.create_window((0, 0), window = self.frame, anchor = 'nw', width = self.winfo_width(), height = height)
-
 class Display_List_Kandang(ttk.Frame):
     def __init__(self, parent: Main_Window, column, row):
         super().__init__(parent)
-        self.treeview = ttk.Treeview(self, columns = ('kandang'), show = 'headings')
+        self.treeview = ttk.Treeview(self, columns = ('kandang'), show = 'headings', selectmode = 'browse')
         self.treeview.pack(expand = True, fill = 'both')
         self.treeview.heading('kandang', text = 'Kandang')
         self.treeview.column('kandang', width = self.winfo_width())
         for kandang in list_of_kandang:
             self.treeview.insert(parent = '', index = 'end', values = kandang)
         self.grid(column = column, row = row, sticky = 'nsew')
+
+        def item_select(_):
+            print(self.treeview.item(self.treeview.selection())['values'][0])
+
+        self.treeview.bind('<<TreeviewSelect>>', item_select)
 
 def import_data_function(parent):
     port = find_open_port()
@@ -156,7 +131,7 @@ def change_connecting_label_text(server_thread: threading.Thread, waiting_for_co
         if os.path.exists(file):
             if file.endswith('.csv'):
                 append_data_to_database(file)
-                os.remove(file)
+                os.remove(file)    
 
 # def display_kandang():
 #     kandang = list_kandang()

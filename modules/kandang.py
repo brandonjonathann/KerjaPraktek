@@ -76,5 +76,3 @@ def jumlah_pakan(karung: int, kg: float):
 
 def hitungan_pakan(ekor: int, spf: float):
     return ekor * spf
-
-print(data_kandang('R9'))

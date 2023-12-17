@@ -17,6 +17,9 @@ from modules.kandang import *
 
 list_of_kandang = list_kandang()
 
+list_kandang_cache = []
+data_kandang_cache = []
+
 def screen_center(self: tk.Tk, width, height):
     x = int((self.winfo_screenwidth() - width) / 2)
     y = int((self.winfo_screenheight() - height) / 2)
@@ -44,9 +47,6 @@ class Main_Window(tk.Tk):
         # Widgets
         self.import_button = Main_Menu_Buttons(self, 'Import Data', lambda: import_data_function(self), 2, 0)
         self.list_kandang = Display_List_Kandang(self, 0, 1)
-        self.current_kandang = None
-
-        # display_kandang()
 
         # Mainloop
         self.mainloop()
@@ -100,19 +100,36 @@ class Display_List_Kandang(ttk.Frame):
         for kandang in list_of_kandang:
             self.treeview.insert(parent = '', index = 'end', values = kandang)
         self.grid(column = column, row = row, sticky = 'nsew')
+        self.selected_kandang = None
 
         def item_select(_):
-            print(self.treeview.item(self.treeview.selection())['values'][0])
+            self.selected_kandang = self.treeview.item(self.treeview.selection())['values'][0]
+            print(self.selected_kandang)
+
+            if self.selected_kandang not in list_kandang_cache:
+                list_kandang_cache.append(self.selected_kandang)
+                data_kandang_cache.append(data_kandang(self.selected_kandang))
+
+            index = list_kandang_cache.index(self.selected_kandang)
+            data = data_kandang_cache[index]
+
+            self.data_kandang = Display_Data_Kandang(parent, data)
+            self.data_kandang.grid(column = column + 1, row = row)
+
+            print(f'cache: {list_kandang_cache}')
+            print(f'cache: {data_kandang_cache}')
 
         self.treeview.bind('<<TreeviewSelect>>', item_select)
 
 class Display_Data_Kandang(ttk.Frame):
-    def __init__(self, parent: Main_Window, column, row):
+    def __init__(self, parent: Main_Window, data):
         super().__init__(parent)
-        self.treeview = ttk.Treeview(self)
-        self.treeview.pack()
+        # self.treeview = ttk.Treeview(self)
+        # self.treeview.pack()
+        # print('success')
 
-        self.grid(column = column, row = row)
+        self.label = ttk.Label(self, text = data[0][0])
+        self.label.pack()
         
 def import_data_function(parent):
     port = find_open_port()

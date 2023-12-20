@@ -87,10 +87,18 @@ def jumlah_telur(jenis: str, ikat: int, eggtray: int, butir: int):
     return total 
 
 def jumlah_pakan(karung: int, kg: float):
-    return round(karung * 60 + kg, 1)
+    result = round(karung * 60 + kg, 1)
+    if result == 0:
+        return ''
+    else:
+        return result
 
 def hitungan_pakan(ekor: int, spf: float):
-    return round(ekor * spf, 1)
+    result = round(ekor * spf, 1)
+    if result == 0:
+        return ''
+    else:
+        return result
 
 def hitung_hari(tanggal: str):
     return datetime.strptime(tanggal, '%m/%d/%Y').strftime('%A')

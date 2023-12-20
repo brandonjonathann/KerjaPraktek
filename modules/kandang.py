@@ -41,6 +41,9 @@ def data_kandang(kandang: str):
         24: jumlah ayam jantan B
         25: jumlah ayam seleksi error
         26: keterangan
+        27: hari ke-
+        28: produksi
+        29: mortality
         """
         data_hari = []
         data_hari.append(row[1])
@@ -70,6 +73,9 @@ def data_kandang(kandang: str):
         data_hari.append(row[29])
         data_hari.append(row[30])
         data_hari.append(row[36])
+        data_hari.append(row_index + 1)
+        data_hari.append(produksi(data_hari[4], data_hari[21], data_hari[22], data_hari[23], data_hari[24], data_hari[25]))
+        data_hari.append(mortalitas(data_hari[6], data_hari[7], data_hari[8], data_hari[9], data_hari[10], data_hari[21], data_hari[22], data_hari[23], data_hari[24], data_hari[25]))
         data_kandang.append(data_hari)
     return data_kandang
 
@@ -102,3 +108,13 @@ def hitungan_pakan(ekor: int, spf: float):
 
 def hitung_hari(tanggal: str):
     return datetime.strptime(tanggal, '%m/%d/%Y').strftime('%A')
+
+def produksi(telur, jumlah_betina, jumlah_jantan, jumlah_betina_B, jumlah_jantan_B, jumlah_SE):
+    total_ayam = jumlah_betina + jumlah_jantan + jumlah_betina_B + jumlah_jantan_B + jumlah_SE
+    total_telur = telur
+    return round(total_telur / total_ayam * 100, 1)
+
+def mortalitas(mati_betina, mati_jantan, mati_betina_B, mati_jantan_B, mati_SE, jumlah_betina, jumlah_jantan, jumlah_betina_B, jumlah_jantan_B, jumlah_SE):
+    total_ayam = jumlah_betina + jumlah_jantan + jumlah_betina_B + jumlah_jantan_B + jumlah_SE
+    total_mati = mati_betina + mati_jantan + mati_betina_B + mati_jantan_B + mati_SE
+    return round(total_mati / total_ayam * 100, 1)

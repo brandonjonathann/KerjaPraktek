@@ -5,6 +5,8 @@ import sys
 import threading
 import time
 import os
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 PATH = pathlib.Path().absolute()
 DATABASE = f'{PATH}/database'
@@ -48,7 +50,6 @@ class Main_Window(tk.Tk):
         self.import_button = Main_Menu_Buttons(self, 'Import Data', lambda: import_data_function(self), 2, 0)
         self.list_kandang = Display_List_Kandang(self, 0, 1)
         self.radiobuttons = Radiobuttons(self, 0, 0)
-        self.checkbuttons = Checkbuttons(self, 1, 0)
 
         # Mainloop
         self.mainloop()
@@ -118,12 +119,15 @@ class Display_List_Kandang(ttk.Frame):
             index = list_kandang_cache.index(self.selected_kandang)
             data = data_kandang_cache[index]
 
-            self.data_kandang = Display_Data_Kandang(parent, data)
+            if parent.radiobuttons.radio_var.get() == 'Table':
+                self.data_kandang = Display_Data_Kandang(parent, data)
+            else:
+                self.data_kandang = Display_Graph(parent, data)
             self.data_kandang.grid(column = column + 1, columnspan = 2, row = row, sticky = 'nsw')
 
         self.treeview.bind('<<TreeviewSelect>>', item_select)
 
-class Checkbuttons(ttk.Frame):
+class Table_Menu(ttk.Frame):
     def __init__(self, parent: Main_Window, column, row):
         super().__init__(parent)
         self.columnconfigure((0, 1, 2, 3, 4, 5), uniform = 'a', weight = 1)
@@ -182,19 +186,97 @@ class Checkbuttons(ttk.Frame):
 
         self.grid(column = column, row = row, sticky = 'nsew')
 
+class Graph_Menu(ttk.Frame):
+    def __init__(self, parent: Main_Window, column, row):
+        super().__init__(parent)
+        self.columnconfigure((0, 1, 2, 3), weight = 1, uniform = 'a')
+        self.rowconfigure(0, weight = 1, uniform = 'a')
+        
+        self.variable = ttk.StringVar()
+        self.radio_telur = ttk.Radiobutton(self, text = 'Produksi Telur', variable = self.variable, value = 'Telur')
+        self.radio_telur.grid(column = 0, row = 0, sticky = 'w')
+        self.radio_mati = ttk.Radiobutton(self, text = 'Jumlah Kematian', variable = self.variable, value = 'Mati')
+        self.radio_mati.grid(column = 1, row = 0, sticky = 'w')
+        self.radio_jumlah = ttk.Radiobutton(self, text = 'Jumlah Ayam', variable = self.variable, value = 'Jumlah')
+        self.radio_jumlah.grid(column = 2, row = 0, sticky = 'w')
+        self.radio_performa = ttk.Radiobutton(self, text = 'Performa Ayam', variable = self.variable, value = 'Performa')
+        self.radio_performa.grid(column = 3, row = 0, sticky = 'w')
+
+        self.grid(column = column, row = row, sticky = 'nsew')
+
 class Radiobuttons(ttk.Frame):
     def __init__(self, parent: Main_Window, column, row):
         super().__init__(parent)
         self.columnconfigure(0, weight = 1, uniform = 'a')
         self.rowconfigure((0, 1), weight = 1, uniform = 'a')
 
-        self.radio_var = ttk.BooleanVar(value = True)
-        self.radio1 = ttk.Radiobutton(self, text = 'Table View', variable = self.radio_var, value = True)
+        self.radio_var = ttk.StringVar()
+        self.radio1 = ttk.Radiobutton(self, text = 'Table View', variable = self.radio_var, value = 'Table')
         self.radio1.grid(column = 0, row = 0, sticky = 'w', padx = 5)
-        self.radio2 = ttk.Radiobutton(self, text = 'Graph View', variable = self.radio_var, value = False)
+        self.radio2 = ttk.Radiobutton(self, text = 'Graph View', variable = self.radio_var, value = 'Graph')
         self.radio2.grid(column = 0, row = 1, sticky = 'w', padx = 5)
 
+        self.menu = None
+
+        def change_view():
+            if self.menu != None:
+                self.menu.destroy()
+
+            if self.radio_var.get() == 'Table':
+                self.menu = Table_Menu(parent, 1, 0)
+            else:
+                self.menu = Graph_Menu(parent, 1, 0)
+        self.radio1.configure(command = change_view)
+        self.radio2.configure(command = change_view)
+
         self.grid(column = column, row = row, sticky = 'nsew')
+
+class Display_Graph(ttk.Frame):
+    def __init__(self, parent: Main_Window, dataset):
+        super().__init__(parent)
+
+        index = None
+        label = None
+        if parent.radiobuttons.menu.variable.get() == 'Telur':
+            index = [4]
+            line_label = ['Telur']
+            label = 'Produksi Telur'
+        elif parent.radiobuttons.menu.variable.get() == 'Mati':
+            index = [6, 7, 8, 9, 10]
+            line_label = ['♀', '♂', '♀ B', '♂ B', 'SE']
+            label = 'Jumlah Kematian'
+        elif parent.radiobuttons.menu.variable.get() == 'Jumlah':
+            index = [21, 22, 23, 24, 25]
+            line_label = ['♀', '♂', '♀ B', '♂ B', 'SE']
+            label = 'Jumlah Ayam'
+        elif parent.radiobuttons.menu.variable.get() == 'Performa':
+            index = [28, 29]
+            line_label = ['Produksi', 'Mortalitas']
+            label = 'Performa (%)'
+        else:
+            index = [1]
+            line_label = ['Hari']
+            label = 'Hari'
+
+        fig = Figure() 
+        ax = fig.add_subplot()
+        ax.set_xlabel('Hari ke-')
+        ax.set_ylabel(label)
+        color = ['red', 'blue', 'green', 'yellow', 'black'] 
+
+        for i in range (len(index)):
+            timeframe = []
+            entry = []
+            for data in dataset:
+                timeframe.append(data[27])
+                entry.append(data[index[i]])
+            
+            ax.plot(timeframe, entry, color = color[i], label = line_label[i])
+        
+        ax.legend()
+        graph = FigureCanvasTkAgg(fig, self)
+        graph.draw()
+        graph.get_tk_widget().pack(expand = True, fill = 'both', padx = 10)
 
 class Display_Data_Kandang(ttk.Frame):
     def __init__(self, parent: Main_Window, dataset):
@@ -204,96 +286,96 @@ class Display_Data_Kandang(ttk.Frame):
         text = ['Tanggal', 'Hari']
         entry = [0, 1]
 
-        if parent.checkbuttons.var_telur.get() == True:
+        if parent.radiobuttons.menu.var_telur.get() == True:
             columns.append('telur')
             text.append('Telur')
             entry.append(4)
-        if parent.checkbuttons.var_betina.get() == True:
-            if parent.checkbuttons.var_mati.get() == True:
+        if parent.radiobuttons.menu.var_betina.get() == True:
+            if parent.radiobuttons.menu.var_mati.get() == True:
                 columns.append('mati_betina')
                 text.append('Kematian ♀')
                 entry.append(6)
-            if parent.checkbuttons.var_jumlah.get() == True:
+            if parent.radiobuttons.menu.var_jumlah.get() == True:
                 columns.append('jumlah_betina')
                 text.append('Jumlah ♀')
                 entry.append(21)
-            if parent.checkbuttons.var_eceran.get() == True:
+            if parent.radiobuttons.menu.var_eceran.get() == True:
                 columns.append('eceran_betina')
                 text.append('Eceran ♀ (kg)')
                 entry.append(11)
-            if parent.checkbuttons.var_pakan.get() == True:
+            if parent.radiobuttons.menu.var_pakan.get() == True:
                 columns.append('pakan_betina')
                 text.append('Pakan ♀ (g)')
                 entry.append(16)
-        if parent.checkbuttons.var_jantan.get() == True:
-            if parent.checkbuttons.var_mati.get() == True:
+        if parent.radiobuttons.menu.var_jantan.get() == True:
+            if parent.radiobuttons.menu.var_mati.get() == True:
                 columns.append('mati_jantan')
                 text.append('Kematian ♂')
                 entry.append(7)
-            if parent.checkbuttons.var_jumlah.get() == True:
+            if parent.radiobuttons.menu.var_jumlah.get() == True:
                 columns.append('jumlah_jantan')
                 text.append('Jumlah ♂')
                 entry.append(22)
-            if parent.checkbuttons.var_eceran.get() == True:
+            if parent.radiobuttons.menu.var_eceran.get() == True:
                 columns.append('eceran_jantan')
                 text.append('Eceran ♂')
                 entry.append(12)
-            if parent.checkbuttons.var_pakan.get() == True:
+            if parent.radiobuttons.menu.var_pakan.get() == True:
                 columns.append('pakan_jantan')
                 text.append('Pakan ♂')
                 entry.append(17)
-        if parent.checkbuttons.var_betina_B.get() == True:
-            if parent.checkbuttons.var_mati.get() == True:
+        if parent.radiobuttons.menu.var_betina_B.get() == True:
+            if parent.radiobuttons.menu.var_mati.get() == True:
                 columns.append('mati_betina_B')
                 text.append('Kematian ♀ B')
                 entry.append(8)
-            if parent.checkbuttons.var_jumlah.get() == True:
+            if parent.radiobuttons.menu.var_jumlah.get() == True:
                 columns.append('jumlah_betina_B')
                 text.append('Jumlah ♀ B')
                 entry.append(23)
-            if parent.checkbuttons.var_eceran.get() == True:
+            if parent.radiobuttons.menu.var_eceran.get() == True:
                 columns.append('eceran_betina_B')
                 text.append('Eceran ♀ B')
                 entry.append(13)
-            if parent.checkbuttons.var_pakan.get() == True:
+            if parent.radiobuttons.menu.var_pakan.get() == True:
                 columns.append('pakan_betina_B')
                 text.append('Pakan ♀ B')
                 entry.append(18)
-        if parent.checkbuttons.var_jantan_B.get() == True:
-            if parent.checkbuttons.var_mati.get() == True:
+        if parent.radiobuttons.menu.var_jantan_B.get() == True:
+            if parent.radiobuttons.menu.var_mati.get() == True:
                 columns.append('mati_jantan_B')
                 text.append('Kematian ♂ B')
                 entry.append(9)
-            if parent.checkbuttons.var_jumlah.get() == True:
+            if parent.radiobuttons.menu.var_jumlah.get() == True:
                 columns.append('jumlah_jantan_B')
                 text.append('Jumlah ♂ B')
                 entry.append(24)
-            if parent.checkbuttons.var_eceran.get() == True:
+            if parent.radiobuttons.menu.var_eceran.get() == True:
                 columns.append('eceran_jantan_B')
                 text.append('Eceran ♂ B')
                 entry.append(14)
-            if parent.checkbuttons.var_pakan.get() == True:
+            if parent.radiobuttons.menu.var_pakan.get() == True:
                 columns.append('pakan_jantan_B')
                 text.append('Pakan ♂ B')
                 entry.append(19)
-        if parent.checkbuttons.var_SE.get() == True:
-            if parent.checkbuttons.var_mati.get() == True:
+        if parent.radiobuttons.menu.var_SE.get() == True:
+            if parent.radiobuttons.menu.var_mati.get() == True:
                 columns.append('mati_SE')
                 text.append('Kematian SE')
                 entry.append(10)
-            if parent.checkbuttons.var_jumlah.get() == True:
+            if parent.radiobuttons.menu.var_jumlah.get() == True:
                 columns.append('jumlah_SE')
                 text.append('Jumlah SE')
                 entry.append(25)
-            if parent.checkbuttons.var_eceran.get() == True:
+            if parent.radiobuttons.menu.var_eceran.get() == True:
                 columns.append('eceran_SE')
                 text.append('Eceran SE')
                 entry.append(15)
-            if parent.checkbuttons.var_pakan.get() == True:
+            if parent.radiobuttons.menu.var_pakan.get() == True:
                 columns.append('pakan_SE')
                 text.append('Pakan SE')
                 entry.append(20)
-        if parent.checkbuttons.var_keterangan.get() == True:
+        if parent.radiobuttons.menu.var_keterangan.get() == True:
             columns.append('keterangan')
             text.append('Keterangan')
             entry.append(26)

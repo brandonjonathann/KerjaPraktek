@@ -114,7 +114,7 @@ class Display_List_Kandang(ttk.Frame):
             data = data_kandang_cache[index]
 
             self.data_kandang = Display_Data_Kandang(parent, data)
-            self.data_kandang.grid(column = column + 1, row = row)
+            self.data_kandang.grid(column = column + 1, columnspan = 2, row = row)
 
             print(f'cache: {list_kandang_cache}')
             print(f'cache: {data_kandang_cache}')
@@ -122,14 +122,45 @@ class Display_List_Kandang(ttk.Frame):
         self.treeview.bind('<<TreeviewSelect>>', item_select)
 
 class Display_Data_Kandang(ttk.Frame):
-    def __init__(self, parent: Main_Window, data):
+    def __init__(self, parent: Main_Window, dataset):
         super().__init__(parent)
-        # self.treeview = ttk.Treeview(self)
-        # self.treeview.pack()
-        # print('success')
+        self.treeview = ttk.Treeview(self, columns = ('tanggal', 'hari', 'telur', 'mati_betina', 'mati_jantan', 'mati_betina_B', 'mati_jantan_B', 'mati_SE', 'jumlah_betina', 'jumlah_jantan', 'jumlah_betina_B', 'jumlah_jantan_B', 'jumlah_SE'), show = 'headings', height = 100)
+        self.treeview.configure()
+        self.treeview.heading('tanggal', text = 'Tanggal')
+        self.treeview.column('tanggal', width = 100)
+        self.treeview.heading('hari', text = 'Hari')
+        self.treeview.column('hari', width = 100)
+        self.treeview.heading('telur', text = 'Produksi Telur')
+        self.treeview.column('telur', width = 100)
+        self.treeview.heading('mati_betina', text = 'Kematian ♀')
+        self.treeview.column('mati_betina', width = 100)
+        self.treeview.heading('mati_jantan', text = 'Kematian ♂')
+        self.treeview.column('mati_jantan', width = 100)
+        self.treeview.heading('mati_betina_B', text = 'Kematian ♀ B')
+        self.treeview.column('mati_betina_B', width = 100)
+        self.treeview.heading('mati_jantan_B', text = 'Kematian ♂ B')
+        self.treeview.column('mati_jantan_B', width = 100)
+        self.treeview.heading('mati_SE', text = 'Kematian SE')
+        self.treeview.column('mati_SE', width = 100)
+        self.treeview.heading('jumlah_betina', text = 'Jumlah ♀')
+        self.treeview.column('jumlah_betina', width = 100)
+        self.treeview.heading('jumlah_jantan', text = 'Jumlah ♂')
+        self.treeview.column('jumlah_jantan', width = 100)
+        self.treeview.heading('jumlah_betina_B', text = 'Jumlah ♀ B')
+        self.treeview.column('jumlah_betina_B', width = 100)
+        self.treeview.heading('jumlah_jantan_B', text = 'Jumlah ♂ B')
+        self.treeview.column('jumlah_jantan_B', width = 100)
+        self.treeview.heading('jumlah_SE', text = 'Jumlah SE')
+        self.treeview.column('jumlah_SE', width = 100)
 
-        self.label = ttk.Label(self, text = data[0][0])
-        self.label.pack()
+        self.treeview.pack(fill = 'both', expand = True)
+        
+        for data in dataset:
+            entry = (data[0], data[1], data[4] + data[5], data[6], data[7], data[8], data[9], data[10], data[21], data[22], data[23], data[24], data[25])
+            self.treeview.insert(parent = '', index = 'end', values = entry)
+
+        # self.label = ttk.Label(self, text = data[0][0])
+        # self.label.pack()
         
 def import_data_function(parent):
     port = find_open_port()
@@ -158,9 +189,5 @@ def change_connecting_label_text(server_thread: threading.Thread, waiting_for_co
             if file.endswith('.csv'):
                 append_data_to_database(file)
                 os.remove(file)    
-
-# def display_kandang():
-#     kandang = list_kandang()
-#     pass
 
 Main_Window()

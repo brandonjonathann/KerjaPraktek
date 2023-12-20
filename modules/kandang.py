@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from datetime import datetime
 
 def list_kandang():
     kandang = os.listdir(f'database/')
@@ -13,31 +14,40 @@ def data_kandang(kandang: str):
     data_kandang = []
     for row_index, row in csv_dataframe.iterrows():
         """
-        0: produksi telur siang
-        1: produksi telur sore
-        2: produksi telur total
-        3: total double
-        4: jumlah betina mati
-        5: jumlah jantan mati
-        6: jumlah betina B mati
-        7: jumlah jantan B mati
-        8: jumlah seleksi error mati
-        9: pakan betina
-        10: pakan jantan
-        11: pakan betina B
-        12: pakan jantan B
-        13: pakan seleksi error
-        14: hitungan pakan betina
-        15: hitungan pakan jantan
-        16: hitungan pakan betina B
-        17: hitungan pakan jantan B
-        18: hitungan pakan seleksi error
-        19: vaksin
+        0: tanggal
+        1: hari
+        2: produksi telur siang
+        3: produksi telur sore
+        4: produksi telur total
+        5: total double
+        6: jumlah betina mati
+        7: jumlah jantan mati
+        8: jumlah betina B mati
+        9: jumlah jantan B mati
+        10: jumlah seleksi error mati
+        11: pakan betina
+        12: pakan jantan
+        13: pakan betina B
+        14: pakan jantan B
+        15: pakan seleksi error
+        16: hitungan pakan betina
+        17: hitungan pakan jantan
+        18: hitungan pakan betina B
+        19: hitungan pakan jantan B
+        20: hitungan pakan seleksi error
+        21: jumlah ayam betina
+        22: jumlah ayam jantan
+        23: jumlah ayam betina B
+        24: jumlah ayam jantan B
+        25: jumlah ayam seleksi error
+        26: keterangan
         """
         data_hari = []
+        data_hari.append(row[1])
+        data_hari.append(hitung_hari(row[1]))
         data_hari.append(jumlah_telur(row[2], row[3], row[4], row[5]))
         data_hari.append(jumlah_telur(row[2], row[7], row[8], row[9]))
-        data_hari.append(data_hari[0] + data_hari[1])
+        data_hari.append(data_hari[2] + data_hari[3])
         data_hari.append(row[6] + row[10])
         data_hari.append(row[11])
         data_hari.append(row[12])
@@ -54,6 +64,11 @@ def data_kandang(kandang: str):
         data_hari.append(hitungan_pakan(row[28], row[33]))
         data_hari.append(hitungan_pakan(row[29], row[34]))
         data_hari.append(hitungan_pakan(row[30], row[35]))
+        data_hari.append(row[26])
+        data_hari.append(row[27])
+        data_hari.append(row[28])
+        data_hari.append(row[29])
+        data_hari.append(row[30])
         data_hari.append(row[36])
         data_kandang.append(data_hari)
     return data_kandang
@@ -72,7 +87,10 @@ def jumlah_telur(jenis: str, ikat: int, eggtray: int, butir: int):
     return total 
 
 def jumlah_pakan(karung: int, kg: float):
-    return karung * 60 + kg
+    return round(karung * 60 + kg, 1)
 
 def hitungan_pakan(ekor: int, spf: float):
-    return ekor * spf
+    return round(ekor * spf, 1)
+
+def hitung_hari(tanggal: str):
+    return datetime.strptime(tanggal, '%m/%d/%Y').strftime('%A')
